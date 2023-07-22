@@ -3,6 +3,7 @@ import logging
 import queue
 from typing import Callable
 
+from .data import UcdpData
 from .event import UcdpEvent
 
 class NoSenderSetException(Exception):
@@ -13,6 +14,7 @@ class Ucdp:
 	def __init__(self):
 		self.logger = logging.getLogger('Ucdp')
 		self.sender = None
+		self.data = UcdpData()
 		self.event_subscribers = {}
 		self.all_events_subscribers = []
 		self.pending_results = {}
@@ -76,6 +78,7 @@ class Ucdp:
 
 	def _process_event(self, event: UcdpEvent):
 		self.logger.debug("-> Event %s: %s", event.name, event.params)
+		self.data._process_event(event)
 		self._emit_event(event)
 
 	def _emit_event(self, event: UcdpEvent):
