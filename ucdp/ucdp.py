@@ -1,10 +1,13 @@
+import collections
 import json
 import logging
 import queue
-from typing import Callable
 
 from .data import UcdpData
 from .event import UcdpEvent
+
+from typing import Callable, Iterable
+EventCallback = Callable[[UcdpEvent], None]
 
 class NoSenderSetException(Exception):
 	def __init__(self):
@@ -17,7 +20,7 @@ class Ucdp:
 		self.event_logger = logging.getLogger('Ucdp.event')
 		self.sender = None
 		self.data = UcdpData()
-		self.event_subscribers = {}
+		self.event_subscribers = collections.defaultdict(list)
 		self.all_events_subscribers = []
 		self.pending_results = {}
 		self.next_msg_id = 1
@@ -35,14 +38,22 @@ class Ucdp:
 		else:
 			self.logger.warning("Unknown message format, ignoring: %s", msg)
 
-	def subscribe_all_events(self, cb: Callable[[UcdpEvent], None]):
-		self.all_events_subscribers.append(cb)
+	def subscribe_events_decorator(self, events: None | str | Iterable[str] = None) -> Callable[[EventCallback], EventCallback]:
+		def wrapper(f):
+			self.subscribe_events(f, events)
+			return f
+		return wrapper
 
-	def subscribe_event(self, event_name: str, cb: Callable[[UcdpEvent], None]):
-		if not event_name in self.event_subscribers:
-			self.event_subscribers[event_name] = []
-
-		self.event_subscribers[event_name].append(cb)
+	def subscribe_events(self, cb: EventCallback, events: None | str | Iterable[str] = None):
+		if events is None:
+			self.all_events_subscribers.append(cb)
+		elif isinstance(events, str):
+			self.event_subscribers[events].append(cb)
+		elif hasattr(events, '__iter__'):
+			for event in events:
+				self.event_subscribers[event].append(cb)
+		else:
+			self.event_subscribers[events].append(cb)
 
 	def call(self, method: str, **params):
 		msg = self._get_msg(method, params)
