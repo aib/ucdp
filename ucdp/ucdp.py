@@ -13,6 +13,8 @@ class NoSenderSetException(Exception):
 class Ucdp:
 	def __init__(self):
 		self.logger = logging.getLogger('Ucdp')
+		self.method_logger = logging.getLogger('Ucdp.method')
+		self.event_logger = logging.getLogger('Ucdp.event')
 		self.sender = None
 		self.data = UcdpData()
 		self.event_subscribers = {}
@@ -64,11 +66,11 @@ class Ucdp:
 		if self.sender is None:
 			raise NoSenderSetException()
 
-		self.logger.debug("<- Method %s: %s %s", msg['id'], msg['method'], msg['params'])
+		self.method_logger.debug("<- Method %s: %s %s", msg['id'], msg['method'], msg['params'])
 		self.sender(json.dumps(msg))
 
 	def _process_result(self, result_id: int, result: dict):
-		self.logger.debug("-> Result %s: %s", result_id, result)
+		self.method_logger.debug("-> Result %s: %s", result_id, result)
 
 		pending = self.pending_results.get(result_id, None)
 		if pending is None:
@@ -77,7 +79,7 @@ class Ucdp:
 			pending.put(result)
 
 	def _process_event(self, event: UcdpEvent):
-		self.logger.debug("-> Event %s: %s", event.name, event.params)
+		self.event_logger.debug("-> Event %s: %s", event.name, event.params)
 		self.data._process_event(event)
 		self._emit_event(event)
 
