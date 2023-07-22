@@ -25,7 +25,7 @@ class Ucdp:
 		msg = json.loads(message)
 		if 'method' in msg:
 			event = UcdpEvent(name=msg['method'], params=msg['params'])
-			self._emit_event(event)
+			self._process_event(event)
 		elif 'result' in msg:
 			self._process_result(msg['id'], msg['result'])
 		else:
@@ -74,9 +74,11 @@ class Ucdp:
 		else:
 			pending.put(result)
 
-	def _emit_event(self, event: UcdpEvent):
+	def _process_event(self, event: UcdpEvent):
 		self.logger.debug("-> Event %s: %s", event.name, event.params)
+		self._emit_event(event)
 
+	def _emit_event(self, event: UcdpEvent):
 		for sub in self.all_events_subscribers:
 			sub(event)
 
