@@ -1,13 +1,9 @@
-import dataclasses
 import json
 import logging
 import queue
 from typing import Callable
 
-@dataclasses.dataclass(frozen=True)
-class UcdpEvent:
-	name: str
-	params: dict
+from .event import UcdpEvent
 
 class NoSenderSetException(Exception):
 	def __init__(self):
