@@ -2,6 +2,7 @@ import collections
 import json
 import logging
 import queue
+import threading
 
 from .data import UcdpData
 from .event import UcdpEvent
@@ -14,7 +15,8 @@ class NoSenderSetException(Exception):
 		super().__init__("No sender set, use set_sender")
 
 class Ucdp:
-	def __init__(self):
+	def __init__(self, use_event_thread=True):
+		self.use_event_thread = use_event_thread
 		self.logger = logging.getLogger('Ucdp')
 		self.method_logger = logging.getLogger('Ucdp.method')
 		self.event_logger = logging.getLogger('Ucdp.event')
@@ -24,6 +26,10 @@ class Ucdp:
 		self.all_events_subscribers = []
 		self.pending_results = {}
 		self.next_msg_id = 1
+
+		if self.use_event_thread:
+			self.event_queue = queue.SimpleQueue()
+			threading.Thread(name='Ucdp::_event_handler_caller', target=self._event_handler_caller, daemon=True).start()
 
 	def set_sender(self, sender: Callable[[str], None]):
 		self.sender = sender
@@ -96,9 +102,16 @@ class Ucdp:
 	def _process_event(self, event: UcdpEvent):
 		self.event_logger.debug("-> Event %s: %s", event.name, event.params)
 		self.data._process_event(event)
-		self._emit_event(event)
+		if self.use_event_thread:
+			self.event_queue.put(event)
+		else:
+			self._emit_event(event)
 
-	def _emit_event(self, event: UcdpEvent):
+	def _event_handler_caller(self):
+		while True:
+			self._emit_event(self.event_queue.get())
+
+	def _emit_event(self, event):
 		for sub in self.all_events_subscribers:
 			sub(event)
 
