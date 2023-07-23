@@ -55,6 +55,10 @@ class Ucdp:
 		else:
 			self.event_subscribers[events].append(cb)
 
+	def call_nowait(self, method: str, **params):
+		msg = self._get_msg(method, params)
+		self._send_msg(msg)
+
 	def call(self, method: str, **params):
 		msg = self._get_msg(method, params)
 		q = queue.SimpleQueue()
