@@ -101,9 +101,7 @@ class Ucdp:
 		self._method_logger.debug("-> Result %s: %s", result_id, result)
 
 		pending = self._pending_results.get(result_id, None)
-		if pending is None:
-			self._logger.warning("Received result %s with no waiters: %s", result_id, result)
-		else:
+		if pending is not None:
 			pending.put(result)
 
 	def _process_event(self, event: UcdpEvent):
